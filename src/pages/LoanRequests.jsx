@@ -206,18 +206,35 @@ export default function LoanRequests() {
                             <div className="grid md:grid-cols-3 gap-6 py-4 border-t-2 border-b-2 border-black/10 bg-gray-50/50 -mx-6 px-6">
                                 <div>
                                     <label className="text-xs font-black text-black uppercase tracking-wider">Land Size</label>
-                                    <p className="text-lg font-bold text-gray-800">{loan.acres} Acres</p>
+                                    <p className="text-lg font-bold text-gray-800">{loan.acres || loan.landSize} Acres</p>
                                 </div>
                                 <div>
                                     <label className="text-xs font-black text-black uppercase tracking-wider">Purpose</label>
                                     <p className="text-lg font-bold text-gray-800 capitalize">
-                                        {loan.loanPurpose.replace('-', ' ')}
+                                        {loan.loanPurpose?.replace('-', ' ')}
                                     </p>
                                 </div>
                                 <div>
                                     <label className="text-xs font-black text-black uppercase tracking-wider">Tenure</label>
                                     <p className="text-lg font-bold text-gray-800">{loan.tenureMonths} Months</p>
                                 </div>
+                            </div>
+
+                            {/* AI Fraud Analysis Section */}
+                            <div className="mt-4 p-4 border-2 border-black rounded-lg bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                                <div className="flex items-center justify-between mb-2">
+                                    <h4 className="text-sm font-black text-black uppercase flex items-center">
+                                        <Shield className={`h-4 w-4 mr-2 ${loan.fraudRiskScore > 50 ? 'text-red-600' : 'text-green-600'}`} />
+                                        AI Fraud Risk Assessment
+                                    </h4>
+                                    <span className={`px-2 py-1 text-xs font-bold rounded border-2 border-black ${loan.fraudRiskScore > 50 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                                        Score: {loan.fraudRiskScore}/100
+                                    </span>
+                                </div>
+                                <p className="text-sm font-semibold text-gray-700">
+                                    <span className="font-bold text-black">Analysis: </span>
+                                    {loan.fraudReason || "No detailed analysis available."}
+                                </p>
                             </div>
 
                             {/* Blockchain & Disbursement Details (Only when APPROVED and available) */}
