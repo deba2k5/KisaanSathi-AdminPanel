@@ -131,9 +131,9 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {renderQuickButton('/add-kiosk', Users, 'Add Agent')}
             {renderQuickButton('/all-kiosks', FileText, 'All Kiosks')}
-            {renderQuickButton('/loan-requests', CreditCard, 'Loan Requests')}
-            {renderQuickButton('#', TrendingUp, 'Reports')}
-            {renderQuickButton('/insurance-policies', FileText, 'Policies', true)} {/* New Link */}
+            {renderQuickButton('/loan-requests', CreditCard, 'Loan Requests', true)}
+            {renderQuickButton('/pending-work', Clock, 'Pending Work')}
+            {renderQuickButton('/insurance-policies', FileText, 'Insurance Policies', true)}
           </div>
         </div>
 

@@ -11,7 +11,7 @@ import './index.css'
 import { AddAgentForm } from './components/Forms/addKioskForm';
 import AllKiosks from './pages/allKiosks';
 import AddFarmerPage from './pages/addFarmer';
-// import NotFound from './pages/NotFound';
+import PendingWork from './pages/pendingWork';
 import LoanRequests from './pages/LoanRequests';
 import Landing from './pages/Landing';
 import InsurancePolicies from './pages/InsurancePolicies';
@@ -100,6 +100,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <InsurancePolicies />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/pending-work"
+        element={
+          <ProtectedRoute>
+            <PendingWork />
           </ProtectedRoute>
         }
       />

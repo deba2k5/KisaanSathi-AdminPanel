@@ -107,9 +107,12 @@ export default function LoanRequests() {
     };
 
     const filteredLoans = loans.filter(loan => {
+        const farmerName = loan.farmerName || '';
+        const purpose = loan.loanPurpose || '';
+
         const matchesSearch =
-            loan.farmerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            loan.loanPurpose.toLowerCase().includes(searchTerm.toLowerCase());
+            farmerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            purpose.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesStatus = statusFilter === 'ALL' || loan.status === statusFilter;
         return matchesSearch && matchesStatus;
     });
@@ -153,8 +156,8 @@ export default function LoanRequests() {
                             key={status}
                             onClick={() => setStatusFilter(status)}
                             className={`px-6 py-2 rounded-lg font-bold border-2 border-black transition-all whitespace-nowrap uppercase tracking-wider ${statusFilter === status
-                                    ? 'bg-black text-white shadow-[4px_4px_0px_0px_rgba(100,100,100,1)] translate-x-[2px] translate-y-[2px]'
-                                    : 'bg-white text-black hover:bg-yellow-100 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none active:shadow-none'
+                                ? 'bg-black text-white shadow-[4px_4px_0px_0px_rgba(100,100,100,1)] translate-x-[2px] translate-y-[2px]'
+                                : 'bg-white text-black hover:bg-yellow-100 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none active:shadow-none'
                                 }`}
                         >
                             {status === 'ALL' ? 'All' : status}
@@ -217,6 +220,34 @@ export default function LoanRequests() {
                                 </div>
                             </div>
 
+                            {/* Blockchain & Disbursement Details (Only when APPROVED and available) */}
+                            {loan.status === 'APPROVED' && loan.blockchainTxHash && (
+                                <div className="mt-4 p-4 bg-green-50 border-2 border-black/10 rounded-lg">
+                                    <h4 className="text-sm font-black text-black uppercase mb-3 flex items-center">
+                                        <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
+                                        Disbursement & Blockchain Details
+                                    </h4>
+                                    <div className="grid md:grid-cols-2 gap-4 text-sm">
+                                        <div>
+                                            <span className="font-bold text-gray-500 block text-xs uppercase">Disbursed Amount</span>
+                                            <span className="font-black text-xl text-green-700">₹{loan.disbursedAmount ? loan.disbursedAmount.toLocaleString('en-IN') : loan.requestedAmount.toLocaleString('en-IN')}</span>
+                                        </div>
+                                        <div>
+                                            <span className="font-bold text-gray-500 block text-xs uppercase">NFT Token ID</span>
+                                            <span className="font-mono font-bold bg-white px-2 py-1 border border-black rounded inline-block">#{loan.tokenId || 'N/A'}</span>
+                                        </div>
+                                        <div className="md:col-span-2">
+                                            <span className="font-bold text-gray-500 block text-xs uppercase">Transaction Hash</span>
+                                            <span className="font-mono text-xs break-all bg-gray-100 p-1 rounded block">{loan.blockchainTxHash}</span>
+                                        </div>
+                                        <div className="md:col-span-2">
+                                            <span className="font-bold text-gray-500 block text-xs uppercase">Contract Address</span>
+                                            <span className="font-mono text-xs break-all bg-gray-100 p-1 rounded block">{loan.smartContractAddress}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="mt-6 flex items-center justify-between gap-4">
                                 <div className="hidden md:block text-sm font-bold text-gray-500">
                                     ID: {loan._id}
@@ -252,8 +283,9 @@ export default function LoanRequests() {
                             </div>
                         </div>
                     ))
-                )}
-            </div>
-        </div>
+                )
+                }
+            </div >
+        </div >
     );
 }

@@ -17,8 +17,11 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const savedUser = localStorage.getItem('insuranceAgent');
     if (savedUser) {
+      const parsed = JSON.parse(savedUser);
+      // Force admin role
+      parsed.role = 'admin';
       setAuthState({
-        user: JSON.parse(savedUser),
+        user: parsed,
         isLoading: false,
         isAuthenticated: true,
       });
@@ -28,76 +31,57 @@ export function AuthProvider({ children }) {
   }, []);
 
   const checkCookies = async () => {
-  return new Promise((resolve) => {
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        const agentData = {
-          id: user.uid,
-          role: 'agent',
-          name: user.displayName || 'Ravi Kumar',
-        };
+    return new Promise((resolve) => {
+      onAuthStateChanged(auth, (user) => {
+        if (user) {
+          // Always set as admin
+          const agentData = {
+            id: user.uid,
+            role: 'admin',
+            name: user.displayName || 'AgroSure Admin',
+          };
 
-        setAuthState({
-          user: agentData,
-          isAuthenticated: true,
-          isLoading: false,
-        });
+          setAuthState({
+            user: agentData,
+            isAuthenticated: true,
+            isLoading: false,
+          });
 
-        localStorage.setItem('insuranceAgent', JSON.stringify(agentData));
-
-        resolve(1);
-      } else {
-        setAuthState(prev => ({ ...prev, isLoading: false }));
-        resolve(0); 
-      }
+          localStorage.setItem('insuranceAgent', JSON.stringify(agentData));
+          resolve(1);
+        } else {
+          setAuthState(prev => ({ ...prev, isLoading: false }));
+          resolve(0);
+        }
+      });
     });
-  });
-};
+  };
 
   const login = async (email, password) => {
     try {
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    
-    const loggedInUser = {
-      id: userCredential.user.uid, 
-      role: 'agent',               
-      name: userCredential.user.displayName || 'AgroSure Agent',
-    };
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
 
-    if (userCredential.user.uid === import.meta.env.VITE_ADMIN_UID) {
-    console.log('Admin logged in')
-    setAuthState(
-      {
-      user : {
-        id: loggedInUser.id,
+      // ALL users are admins in admin panel
+      const loggedInUser = {
+        id: userCredential.user.uid,
         role: 'admin',
-        name: loggedInUser.name,
-      },
-      isAuthenticated: true,
-      isLoading: false
-    })
-    localStorage.setItem('insuranceAgent', JSON.stringify({
-      id: loggedInUser.id,
-      role: 'admin',
-      name: loggedInUser.name,
-    }));
-  }
-    else {
-    setAuthState( 
-    {
-      user: loggedInUser,
-      isLoading: false,
-      isAuthenticated: true,
-    });
-    localStorage.setItem('insuranceAgent', JSON.stringify(loggedInUser));
-    }
-    console.log('Login successful');
+        name: userCredential.user.displayName || 'AgroSure Admin',
+      };
 
-  } catch (error) {
-    console.error('Login error:', error.message);
-    setAuthState(prev => ({ ...prev, isLoading: false }));
-    throw new Error('Invalid credentials');
-  }
+      setAuthState({
+        user: loggedInUser,
+        isAuthenticated: true,
+        isLoading: false
+      });
+
+      localStorage.setItem('insuranceAgent', JSON.stringify(loggedInUser));
+      console.log('Admin login successful');
+
+    } catch (error) {
+      console.error('Login error:', error.message);
+      setAuthState(prev => ({ ...prev, isLoading: false }));
+      throw new Error('Invalid credentials');
+    }
   };
 
   const logout = () => {
@@ -115,29 +99,23 @@ export function AuthProvider({ children }) {
     try {
       const result = await signInWithPopup(auth, provider);
 
+      // Always admin
+      const adminUser = {
+        id: result.user.uid,
+        role: 'admin',
+        name: result.user.displayName || 'AgroSure Admin',
+      };
+
       setAuthState({
-        user : result.user
-          ? result.user.uid === import.meta.env.VITE_ADMIN_UID ? {
-            id: result.user.uid,
-            role: 'admin',
-            name: result.user.displayName || 'AgroSure Admin',
-          } : 
-          {
-            id: result.user.uid,
-            role: 'agent',
-            name: result.user.displayName || 'Ravi Kumar',
-          }
-          : null,
-        isAuthenticated : true,
+        user: adminUser,
+        isAuthenticated: true,
         isLoading: false,
       });
-      localStorage.setItem('insuranceAgent', JSON.stringify({
-        id: result.user.uid,
-        role: 'agent',
-        name: result.user.displayName || 'Ravi Kumar',
-      }));
+
+      localStorage.setItem('insuranceAgent', JSON.stringify(adminUser));
     } catch (error) {
       console.error("Login error:", error);
+      setAuthState(prev => ({ ...prev, isLoading: false }));
     }
   };
 
@@ -145,12 +123,11 @@ export function AuthProvider({ children }) {
     auth.signOut();
     setAuthState({
       user: null,
-      isAuthenticated:false,
+      isAuthenticated: false,
       isLoading: false,
     });
     localStorage.removeItem('insuranceAgent');
   };
-
 
   return (
     <AuthContext.Provider value={{ ...authState, login, logout, handleGoogleLogin, handleLogout, checkCookies }}>

@@ -71,8 +71,11 @@ export default function InsurancePolicies() {
 
     const filteredClaims = claims.filter(claim => {
         const matchesFilter = filter === 'All' || claim.status === filter;
-        const matchesSearch = claim.farmer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            claim.id.toLowerCase().includes(searchTerm.toLowerCase());
+        const farmerName = claim.farmer || '';
+        const claimId = claim.id || '';
+
+        const matchesSearch = farmerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            claimId.toString().toLowerCase().includes(searchTerm.toLowerCase());
         return matchesFilter && matchesSearch;
     });
 
