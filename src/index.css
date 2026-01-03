@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Aegis / Neo-Brutalism Palette */
+    --background: 48 100% 96%;
+    /* #FFFAEB (Light Cream) */
+    --foreground: 0 0% 0%;
+    /* #000000 (Pure Black) */
+
+    --card: 0 0% 100%;
+    /* White */
+    --card-foreground: 0 0% 0%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 0%;
+
+    /* Primary - Bright Blue for Actions */
+    --primary: 221 83% 53%;
+    /* #2563EB (Blue 600) */
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary - Yellow/Warning */
+    --secondary: 47 95% 57%;
+    /* #FACC15 (Yellow 400) */
+    --secondary-foreground: 0 0% 0%;
+
+    /* Accent - Red/Destructive or Highlight */
+    --accent: 0 72% 51%;
+    /* #DC2626 (Red 600) */
+    --accent-foreground: 0 0% 100%;
+
+    --muted: 60 4.8% 95.9%;
+    --muted-foreground: 25 5.3% 44.7%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 0 0% 0%;
+    /* Black Borders */
+    --input: 0 0% 0%;
+    --ring: 0 0% 0%;
+
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-black;
+  }
+
+  body {
+    @apply bg-[#f0f0f0] text-foreground font-sans;
+    /* Light gray background for contrast */
+  }
+
+  /* Neo-Brutalism Utilities */
+  .neo-box {
+    @apply border-2 border-black shadow-neo bg-white rounded-xl transition-all;
+  }
+
+  .neo-box:hover {
+    @apply shadow-none translate-x-[2px] translate-y-[2px];
+  }
+
+  .neo-button {
+    @apply px-4 py-2 font-bold uppercase tracking-wide border-2 border-black shadow-neo transition-all active:shadow-none active:translate-x-[2px] active:translate-y-[2px] rounded-lg;
+  }
+
+  .neo-input {
+    @apply w-full p-3 border-2 border-black rounded-lg font-bold focus:outline-none focus:ring-0 focus:shadow-neo transition-shadow;
+  }
+}

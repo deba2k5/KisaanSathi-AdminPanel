@@ -1,0 +1,259 @@
+import React, { useState, useEffect } from 'react';
+import { Shield, CheckCircle, XCircle, Clock, Search, Filter, Loader2, CreditCard, Trash2 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { toast } from 'react-toastify';
+
+const StatusBadge = ({ status }) => {
+    const styles = {
+        APPROVED: 'bg-green-100 text-black border-green-600',
+        PENDING: 'bg-yellow-100 text-black border-yellow-600',
+        REJECTED: 'bg-red-100 text-black border-red-600',
+        UNDER_REVIEW: 'bg-blue-100 text-black border-blue-600',
+    };
+
+    return (
+        <span className={`px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider border-2 ${styles[status] || 'bg-gray-100 text-black border-black'}`}>
+            {status}
+        </span>
+    );
+};
+
+export default function LoanRequests() {
+    const [loans, setLoans] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('ALL');
+    const { user } = useAuth(); // Assuming we might need token later
+
+    useEffect(() => {
+        fetchLoans();
+    }, []);
+
+    const fetchLoans = async () => {
+        try {
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/loan/getAll`);
+            const data = await response.json();
+            if (data.success) {
+                setLoans(data.loans);
+            } else {
+                toast.error('Failed to fetch loans');
+            }
+        } catch (error) {
+            console.error('Error fetching loans:', error);
+            toast.error('Error connecting to server');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleStatusUpdate = async (id, newStatus) => {
+        try {
+            // Optimistic update
+            setLoans(prevLoans => prevLoans.map(loan =>
+                loan._id === id ? { ...loan, status: newStatus } : loan
+            ));
+
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/loan/updateStatus/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ status: newStatus }),
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                toast.success(`Loan ${newStatus.toLowerCase()} successfully`);
+            } else {
+                // Revert on failure
+                fetchLoans();
+                toast.error(data.message || 'Failed to update status');
+            }
+        } catch (error) {
+            console.error('Error updating status:', error);
+            fetchLoans(); // Revert
+            toast.error('Server error updating status');
+        }
+    };
+
+    const handleDelete = async (id) => {
+        if (!window.confirm("Are you sure you want to delete this loan request? This action cannot be undone.")) {
+            return;
+        }
+
+        try {
+            // Optimistic update
+            const mLoans = loans;
+            setLoans(prevLoans => prevLoans.filter(loan => loan._id !== id));
+
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/loan/delete/${id}`, {
+                method: 'DELETE',
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                toast.success('Loan request deleted successfully');
+            } else {
+                setLoans(mLoans); // Revert
+                toast.error(data.message || 'Failed to delete loan');
+            }
+        } catch (error) {
+            console.error('Error deleting loan:', error);
+            fetchLoans(); // Revert
+            toast.error('Server error deleting loan');
+        }
+    };
+
+    const filteredLoans = loans.filter(loan => {
+        const matchesSearch =
+            loan.farmerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            loan.loanPurpose.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesStatus = statusFilter === 'ALL' || loan.status === statusFilter;
+        return matchesSearch && matchesStatus;
+    });
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-yellow-50">
+                <Loader2 className="h-12 w-12 animate-spin text-black" />
+            </div>
+        );
+    }
+
+    return (
+        <div className="min-h-screen bg-yellow-50 p-6 md:p-8 font-mono">
+            <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div>
+                    <h1 className="text-4xl font-black text-black uppercase tracking-tighter mb-2">Loan Requests</h1>
+                    <p className="text-gray-700 font-medium">Manage and review farmer financing applications</p>
+                </div>
+                <div className="bg-white border-2 border-black rounded-lg px-4 py-2 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                    <span className="font-bold text-lg">{filteredLoans.length} Applications</span>
+                </div>
+            </div>
+
+            {/* Filters */}
+            <div className="grid md:grid-cols-3 gap-6 mb-8">
+                <div className="relative md:col-span-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-black" />
+                    <input
+                        type="text"
+                        placeholder="Search farmer or purpose..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="neo-input pl-10"
+                    />
+                </div>
+
+                <div className="md:col-span-2 flex gap-3 overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
+                    {['ALL', 'PENDING', 'APPROVED', 'REJECTED'].map((status) => (
+                        <button
+                            key={status}
+                            onClick={() => setStatusFilter(status)}
+                            className={`px-6 py-2 rounded-lg font-bold border-2 border-black transition-all whitespace-nowrap uppercase tracking-wider ${statusFilter === status
+                                    ? 'bg-black text-white shadow-[4px_4px_0px_0px_rgba(100,100,100,1)] translate-x-[2px] translate-y-[2px]'
+                                    : 'bg-white text-black hover:bg-yellow-100 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none active:shadow-none'
+                                }`}
+                        >
+                            {status === 'ALL' ? 'All' : status}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Loan List */}
+            <div className="space-y-6">
+                {filteredLoans.length === 0 ? (
+                    <div className="text-center py-20 neo-box border-dashed">
+                        <CreditCard className="mx-auto h-16 w-16 text-black mb-4" />
+                        <h3 className="text-xl font-bold text-black uppercase">No loan requests found</h3>
+                        <p className="mt-2 text-gray-600 font-medium">Try adjusting your filters or search terms.</p>
+                    </div>
+                ) : (
+                    filteredLoans.map((loan) => (
+                        <div key={loan._id} className="neo-box p-6 relative group">
+                            {/* Decorative corner tag */}
+                            <div className="absolute top-0 right-0 bg-black text-white text-xs font-bold px-3 py-1 rounded-bl-lg border-l-2 border-b-2 border-white">
+                                {loan.cropType}
+                            </div>
+
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-6">
+                                <div className="flex items-center gap-4">
+                                    <div className="h-14 w-14 bg-yellow-200 border-2 border-black rounded-lg flex items-center justify-center flex-shrink-0 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                                        <CreditCard className="h-7 w-7 text-black" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xl font-bold text-black">{loan.farmerName}</h3>
+                                        <p className="text-sm font-semibold text-gray-600">Applied on {new Date(loan.createdAt).toLocaleDateString()}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <StatusBadge status={loan.status} />
+                                    <div className="text-right">
+                                        <div className="text-2xl font-black text-black">
+                                            ₹{loan.requestedAmount.toLocaleString('en-IN')}
+                                        </div>
+                                        <div className="text-xs font-bold text-gray-500 uppercase">Requested Amount</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid md:grid-cols-3 gap-6 py-4 border-t-2 border-b-2 border-black/10 bg-gray-50/50 -mx-6 px-6">
+                                <div>
+                                    <label className="text-xs font-black text-black uppercase tracking-wider">Land Size</label>
+                                    <p className="text-lg font-bold text-gray-800">{loan.acres} Acres</p>
+                                </div>
+                                <div>
+                                    <label className="text-xs font-black text-black uppercase tracking-wider">Purpose</label>
+                                    <p className="text-lg font-bold text-gray-800 capitalize">
+                                        {loan.loanPurpose.replace('-', ' ')}
+                                    </p>
+                                </div>
+                                <div>
+                                    <label className="text-xs font-black text-black uppercase tracking-wider">Tenure</label>
+                                    <p className="text-lg font-bold text-gray-800">{loan.tenureMonths} Months</p>
+                                </div>
+                            </div>
+
+                            <div className="mt-6 flex items-center justify-between gap-4">
+                                <div className="hidden md:block text-sm font-bold text-gray-500">
+                                    ID: {loan._id}
+                                </div>
+
+                                <div className="flex gap-3 w-full md:w-auto">
+                                    {loan.status === 'PENDING' && (
+                                        <>
+                                            <button
+                                                onClick={() => handleStatusUpdate(loan._id, 'REJECTED')}
+                                                className="flex-1 md:flex-none flex items-center justify-center px-4 py-2 border-2 border-black bg-red-100 text-black rounded-lg hover:bg-red-200 font-bold transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-[2px] active:translate-y-[2px]"
+                                            >
+                                                <XCircle className="h-5 w-5 mr-2" />
+                                                REJECT
+                                            </button>
+                                            <button
+                                                onClick={() => handleStatusUpdate(loan._id, 'APPROVED')}
+                                                className="flex-1 md:flex-none flex items-center justify-center px-4 py-2 border-2 border-black bg-green-400 text-black rounded-lg hover:bg-green-500 font-bold transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-[2px] active:translate-y-[2px]"
+                                            >
+                                                <CheckCircle className="h-5 w-5 mr-2" />
+                                                APPROVE
+                                            </button>
+                                        </>
+                                    )}
+                                    <button
+                                        onClick={() => handleDelete(loan._id)}
+                                        className="p-2 border-2 border-black bg-white text-black hover:bg-red-50 hover:text-red-500 rounded-lg transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-[2px] active:translate-y-[2px]"
+                                        title="Delete Request"
+                                    >
+                                        <Trash2 className="h-5 w-5" />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    ))
+                )}
+            </div>
+        </div>
+    );
+}
