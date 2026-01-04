@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, CheckCircle, XCircle, Clock, Search, Filter, Loader2, CreditCard, Trash2 } from 'lucide-react';
+import { Shield, CheckCircle, XCircle, Clock, Search, Filter, Loader2, CreditCard, Trash2, Zap } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 
@@ -222,20 +222,94 @@ export default function LoanRequests() {
 
                             {/* AI Fraud Analysis Section */}
                             <div className="mt-4 p-4 border-2 border-black rounded-lg bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                                <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center justify-between mb-3">
                                     <h4 className="text-sm font-black text-black uppercase flex items-center">
-                                        <Shield className={`h-4 w-4 mr-2 ${loan.fraudRiskScore > 50 ? 'text-red-600' : 'text-green-600'}`} />
+                                        <Shield className={`h-4 w-4 mr-2 ${loan.fraudRiskScore > 60 ? 'text-red-600' : loan.fraudRiskScore > 40 ? 'text-yellow-600' : 'text-green-600'}`} />
                                         AI Fraud Risk Assessment
                                     </h4>
-                                    <span className={`px-2 py-1 text-xs font-bold rounded border-2 border-black ${loan.fraudRiskScore > 50 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
-                                        Score: {loan.fraudRiskScore}/100
-                                    </span>
+                                    <div className="flex gap-2 items-center">
+                                        <span className={`px-2 py-1 text-xs font-bold rounded border-2 border-black ${
+                                            loan.fraudRiskScore >= 80 ? 'bg-red-200 text-red-800' :
+                                            loan.fraudRiskScore >= 60 ? 'bg-orange-200 text-orange-800' :
+                                            loan.fraudRiskScore >= 40 ? 'bg-yellow-200 text-yellow-800' :
+                                            'bg-green-200 text-green-800'
+                                        }`}>
+                                            {loan.fraudRiskLevel || 'MEDIUM_RISK'}
+                                        </span>
+                                        <span className="text-lg font-black text-black bg-white px-3 py-1 rounded border-2 border-black">
+                                            {loan.fraudRiskScore}/100
+                                        </span>
+                                    </div>
                                 </div>
-                                <p className="text-sm font-semibold text-gray-700">
+                                <div className="w-full bg-gray-200 border-2 border-black rounded-full h-3 overflow-hidden mb-3">
+                                    <div 
+                                        className={`h-full transition-all ${
+                                            loan.fraudRiskScore >= 80 ? 'bg-red-500' :
+                                            loan.fraudRiskScore >= 60 ? 'bg-orange-500' :
+                                            loan.fraudRiskScore >= 40 ? 'bg-yellow-500' :
+                                            'bg-green-500'
+                                        }`}
+                                        style={{ width: `${loan.fraudRiskScore}%` }}
+                                    />
+                                </div>
+                                <p className="text-sm font-semibold text-gray-700 mb-3">
                                     <span className="font-bold text-black">Analysis: </span>
                                     {loan.fraudReason || "No detailed analysis available."}
                                 </p>
+                                {loan.fraudRiskFactors && loan.fraudRiskFactors.length > 0 && (
+                                    <div className="mt-3 pt-3 border-t-2 border-black/10">
+                                        <p className="text-xs font-bold text-black uppercase mb-2">Risk Factors:</p>
+                                        <div className="space-y-2">
+                                            {loan.fraudRiskFactors.map((factor, idx) => (
+                                                <div key={idx} className="bg-gray-50 p-2 rounded border-l-4 border-black">
+                                                    <p className="text-xs font-bold text-black">{factor.category}</p>
+                                                    <p className="text-xs text-gray-700">{factor.description}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
+
+                            {/* Eligibility Score Section */}
+                            {loan.eligibilityScore !== null && (
+                                <div className="mt-4 p-4 border-2 border-black rounded-lg bg-blue-50 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <h4 className="text-sm font-black text-black uppercase flex items-center">
+                                            <Zap className={`h-4 w-4 mr-2 ${loan.eligibilityScore >= 60 ? 'text-blue-600' : 'text-yellow-600'}`} />
+                                            ML Eligibility Prediction
+                                        </h4>
+                                        <div className="flex gap-2 items-center">
+                                            <span className={`px-3 py-1 text-xs font-bold rounded-full border-2 border-black ${
+                                                loan.eligibilityScore >= 75 ? 'bg-green-200 text-green-800' :
+                                                loan.eligibilityScore >= 60 ? 'bg-blue-200 text-blue-800' :
+                                                loan.eligibilityScore >= 40 ? 'bg-yellow-200 text-yellow-800' :
+                                                'bg-red-200 text-red-800'
+                                            }`}>
+                                                {loan.predictedEligible ? '✓ ELIGIBLE' : '✗ NOT ELIGIBLE'}
+                                            </span>
+                                            <span className="text-lg font-black text-black bg-white px-3 py-1 rounded border-2 border-black">
+                                                {loan.eligibilityScore.toFixed(1)}%
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="w-full bg-gray-200 border-2 border-black rounded-full h-4 overflow-hidden mb-3">
+                                        <div 
+                                            className={`h-full transition-all ${
+                                                loan.eligibilityScore >= 75 ? 'bg-green-500' :
+                                                loan.eligibilityScore >= 60 ? 'bg-blue-500' :
+                                                loan.eligibilityScore >= 40 ? 'bg-yellow-500' :
+                                                'bg-red-500'
+                                            }`}
+                                            style={{ width: `${loan.eligibilityScore}%` }}
+                                        />
+                                    </div>
+                                    <p className="text-sm font-semibold text-gray-700">
+                                        <span className="font-bold text-black">Analysis: </span>
+                                        {loan.eligibilityReasoning || "No detailed analysis available."}
+                                    </p>
+                                </div>
+                            )}
 
                             {/* Blockchain & Disbursement Details (Only when APPROVED and available) */}
                             {loan.status === 'APPROVED' && loan.blockchainTxHash && (

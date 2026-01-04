@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, CheckCircle, XCircle, Search, Filter, Eye, Loader2, ArrowLeft } from 'lucide-react';
+import { FileText, CheckCircle, XCircle, Search, Filter, Eye, Loader2, ArrowLeft, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 // Note: Replace with actual backend API call later
@@ -23,20 +23,51 @@ export default function InsurancePolicies() {
                 const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/insurance/all`);
                 const data = await response.json();
                 if (data.success) {
-                    // Normalize data structure if needed, backend sends { claims: [...] }
-                    // Transforming backend 'status' to frontend expected 'Pending', 'Approved', 'Rejected' casing if needed
-                    // But let's assume backend returns "Under Review" or similar. 
-                    // Let's map "Under Review" to "Pending" for UI consistency or handle raw strings.
                     const mappedClaims = data.claims.map(c => ({
                         id: c._id,
-                        farmer: c.userId || "Unknown Farmer", // ideally backend populates this, or we fetch
+                        farmer: c.farmerName || "Unknown Farmer", // Use farmerName if available
                         policyType: c.provider || "General Policy",
-                        amount: 0, // Backend might not have amount in schema yet? Mocking for now as schema had 'authenticityScore' etc.
+                        amount: c.claimAmount || 0, // Use claimAmount from backend
                         status: c.status === 'Under Review' ? 'Pending' : c.status,
                         date: new Date(c.submissionDate).toLocaleDateString(),
-                        docUrl: '#'
+                        docUrl: '#',
+                        uin: c.uin,
+                        policyNumber: c.policyNumber,
+                        firebaseUid: c.firebaseUid,
+                        // Add eligibility and fraud fields from API response
+                        eligibilityScore: c.eligibilityScore || null,
+                        eligibilityReasoning: c.eligibilityReasoning || "",
+                        predictedEligible: c.predictedEligible || false,
+                        fraudRiskScore: c.fraudRiskScore || 0,
+                        fraudReason: c.fraudReason || "",
+                        fraudRiskLevel: c.fraudRiskLevel || "MEDIUM_RISK"
                     }));
                     setClaims(mappedClaims);
+                    
+                    // Fetch farmer names for all claims with firebaseUid
+                    const fetchFarmerNames = async () => {
+                        const claimsToUpdate = mappedClaims.filter(
+                            claim => claim.firebaseUid && claim.farmer === "Unknown Farmer"
+                        );
+                        
+                        for (const claim of claimsToUpdate) {
+                            try {
+                                const userResponse = await fetch(
+                                    `${import.meta.env.VITE_BACKEND_URL}/api/user/${claim.firebaseUid}/profile`
+                                );
+                                const userData = await userResponse.json();
+                                if (userData.success && userData.data && userData.data.farmerName) {
+                                    setClaims(prevClaims => prevClaims.map(c => 
+                                        c.id === claim.id ? { ...c, farmer: userData.data.farmerName } : c
+                                    ));
+                                }
+                            } catch (err) {
+                                console.error("Failed to fetch farmer data:", err);
+                            }
+                        }
+                    };
+                    
+                    fetchFarmerNames();
                 }
             } catch (error) {
                 console.error("Error fetching claims:", error);
@@ -151,55 +182,95 @@ export default function InsurancePolicies() {
                     </div>
                 ) : (
                     filteredClaims.map((claim) => (
-                        <div key={claim.id} className="neo-box p-6 flex flex-col lg:flex-row gap-6 items-start lg:items-center justify-between group hover:bg-blue-50/50">
-
-                            {/* Info */}
-                            <div className="flex-1">
-                                <div className="flex flex-wrap items-center gap-3 mb-2">
-                                    <span className="font-black text-lg">#{claim.id}</span>
-                                    <span className={`px-3 py-1 rounded-full text-xs font-black uppercase border-2 ${getStatusColor(claim.status)}`}>
-                                        {claim.status}
-                                    </span>
-                                    <span className="text-xs font-bold text-gray-500 bg-gray-200 px-2 py-1 rounded border border-gray-400">
-                                        {claim.date}
-                                    </span>
+                        <div key={claim.id} className="neo-box p-6">
+                            <div className="flex flex-col lg:flex-row gap-6 items-start lg:items-center justify-between group hover:bg-blue-50/50 pb-4 border-b-2 border-black/10">
+                                {/* Info */}
+                                <div className="flex-1">
+                                    <div className="flex flex-wrap items-center gap-3 mb-2">
+                                        <span className="font-black text-lg">#{claim.id}</span>
+                                        <span className={`px-3 py-1 rounded-full text-xs font-black uppercase border-2 ${getStatusColor(claim.status)}`}>
+                                            {claim.status}
+                                        </span>
+                                        <span className="text-xs font-bold text-gray-500 bg-gray-200 px-2 py-1 rounded border border-gray-400">
+                                            {claim.date}
+                                        </span>
+                                    </div>
+                                    <h3 className="font-bold text-xl mb-1">{claim.farmer}</h3>
+                                    <p className="text-gray-600 font-medium flex items-center gap-2">
+                                        policy: <span className="text-black">{claim.policyType}</span>
+                                    </p>
                                 </div>
-                                <h3 className="font-bold text-xl mb-1">{claim.farmer}</h3>
-                                <p className="text-gray-600 font-medium flex items-center gap-2">
-                                    policy: <span className="text-black">{claim.policyType}</span>
-                                </p>
+
+                                {/* Amount */}
+                                <div className="text-left lg:text-right min-w-[150px]">
+                                    <p className="text-xs font-bold text-gray-500 uppercase">Claim Amount</p>
+                                    <p className="text-2xl font-black">₹{claim.amount.toLocaleString('en-IN')}</p>
+                                </div>
+
+                                {/* Actions */}
+                                <div className="flex flex-wrap gap-3 w-full lg:w-auto justify-end">
+                                    <button className="neo-button bg-white hover:bg-gray-100 text-sm flex items-center gap-2">
+                                        <Eye className="h-4 w-4" /> View Doc
+                                    </button>
+
+                                    {claim.status === 'Pending' && (
+                                        <>
+                                            <button
+                                                onClick={() => handleStatusChange(claim.id, 'Approved')}
+                                                className="neo-button bg-green-500 hover:bg-green-600 text-white text-sm flex items-center gap-2"
+                                            >
+                                                <CheckCircle className="h-4 w-4" /> Approve
+                                            </button>
+                                            <button
+                                                onClick={() => handleStatusChange(claim.id, 'Rejected')}
+                                                className="neo-button bg-red-500 hover:bg-red-600 text-white text-sm flex items-center gap-2"
+                                            >
+                                                <XCircle className="h-4 w-4" /> Reject
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
                             </div>
 
-                            {/* Amount */}
-                            <div className="text-left lg:text-right min-w-[150px]">
-                                <p className="text-xs font-bold text-gray-500 uppercase">Claim Amount</p>
-                                <p className="text-2xl font-black">₹{claim.amount.toLocaleString('en-IN')}</p>
-                            </div>
-
-                            {/* Actions */}
-                            <div className="flex flex-wrap gap-3 w-full lg:w-auto justify-end">
-                                <button className="neo-button bg-white hover:bg-gray-100 text-sm flex items-center gap-2">
-                                    <Eye className="h-4 w-4" /> View Doc
-                                </button>
-
-                                {claim.status === 'Pending' && (
-                                    <>
-                                        <button
-                                            onClick={() => handleStatusChange(claim.id, 'Approved')}
-                                            className="neo-button bg-green-500 hover:bg-green-600 text-white text-sm flex items-center gap-2"
-                                        >
-                                            <CheckCircle className="h-4 w-4" /> Approve
-                                        </button>
-                                        <button
-                                            onClick={() => handleStatusChange(claim.id, 'Rejected')}
-                                            className="neo-button bg-red-500 hover:bg-red-600 text-white text-sm flex items-center gap-2"
-                                        >
-                                            <XCircle className="h-4 w-4" /> Reject
-                                        </button>
-                                    </>
-                                )}
-                            </div>
-
+                            {/* Eligibility Score Section */}
+                            {claim.eligibilityScore !== null && (
+                                <div className="mt-4 p-4 border-2 border-black rounded-lg bg-blue-50">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <h4 className="text-sm font-black text-black uppercase flex items-center">
+                                            <Zap className={`h-4 w-4 mr-2 ${claim.eligibilityScore >= 60 ? 'text-blue-600' : 'text-yellow-600'}`} />
+                                            ML Eligibility Prediction
+                                        </h4>
+                                        <div className="flex gap-2 items-center">
+                                            <span className={`px-3 py-1 text-xs font-bold rounded-full border-2 border-black ${
+                                                claim.eligibilityScore >= 75 ? 'bg-green-200 text-green-800' :
+                                                claim.eligibilityScore >= 60 ? 'bg-blue-200 text-blue-800' :
+                                                claim.eligibilityScore >= 40 ? 'bg-yellow-200 text-yellow-800' :
+                                                'bg-red-200 text-red-800'
+                                            }`}>
+                                                {claim.predictedEligible ? '✓ ELIGIBLE' : '✗ NOT ELIGIBLE'}
+                                            </span>
+                                            <span className="text-lg font-black text-black bg-white px-3 py-1 rounded border-2 border-black">
+                                                {claim.eligibilityScore.toFixed(1)}%
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="w-full bg-gray-200 border-2 border-black rounded-full h-4 overflow-hidden mb-3">
+                                        <div 
+                                            className={`h-full transition-all ${
+                                                claim.eligibilityScore >= 75 ? 'bg-green-500' :
+                                                claim.eligibilityScore >= 60 ? 'bg-blue-500' :
+                                                claim.eligibilityScore >= 40 ? 'bg-yellow-500' :
+                                                'bg-red-500'
+                                            }`}
+                                            style={{ width: `${claim.eligibilityScore}%` }}
+                                        />
+                                    </div>
+                                    <p className="text-sm font-semibold text-gray-700">
+                                        <span className="font-bold text-black">Analysis: </span>
+                                        {claim.eligibilityReasoning || "No detailed analysis available."}
+                                    </p>
+                                </div>
+                            )}
                         </div>
                     ))
                 )}
